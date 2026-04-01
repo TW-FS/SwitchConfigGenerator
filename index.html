@@ -3,116 +3,87 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multi-Vendor Switch Config Generator | Fixed ZIP Export</title>
+<title>Multi-Vendor Switch Config Generator | Model Lookup + Zyxel</title>
 <style>
-  /* (same CSS as provided - keeping it for brevity) */
+  /* ========== CSS (unchanged) ========== */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg:        #0f1117;
-    --bg2:       #181c27;
-    --bg3:       #1e2333;
-    --bg4:       #252b3b;
-    --border:    rgba(255,255,255,0.08);
-    --border2:   rgba(255,255,255,0.14);
-    --text:      #e8eaf0;
-    --text2:     #8b91a8;
-    --text3:     #555e78;
-    --accent:    #4f8ef7;
-    --accent2:   #1a3a70;
-    --green:     #3ecf6e;
-    --green-bg:  #0d2a1a;
-    --amber:     #f59e0b;
-    --amber-bg:  #2a1e04;
-    --red:       #f06a6a;
-    --red-bg:    #2a0f0f;
-    --purple:    #a78bfa;
-    --purple-bg: #1e1535;
-    --blue-pill: #1a3a70;
-    --blue-text: #7eb3ff;
+    --bg: #0f1117; --bg2: #181c27; --bg3: #1e2333; --bg4: #252b3b;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #e8eaf0; --text2: #8b91a8; --text3: #555e78;
+    --accent: #4f8ef7; --accent2: #1a3a70; --green: #3ecf6e; --green-bg: #0d2a1a;
+    --amber: #f59e0b; --amber-bg: #2a1e04; --red: #f06a6a; --red-bg: #2a0f0f;
+    --purple: #a78bfa; --purple-bg: #1e1535; --blue-pill: #1a3a70; --blue-text: #7eb3ff;
   }
-
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
   .container { max-width: 1100px; margin: 0 auto; }
   header { margin-bottom: 2rem; }
   header h1 { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--text); }
   header p { font-size: 14px; color: var(--text2); margin-top: 4px; }
-
   .badge-vendor { background: var(--bg4); padding: 2px 10px; border-radius: 40px; font-size: 12px; font-weight: normal; margin-left: 8px; color: var(--blue-text); border: 0.5px solid var(--border2); }
-
   .card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
-
   .label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-
   .drop-zone { border: 1.5px dashed var(--border2); border-radius: 10px; padding: 2.5rem 1rem; text-align: center; cursor: pointer; background: var(--bg3); transition: background 0.15s, border-color 0.15s; }
   .drop-zone:hover, .drop-zone.over { background: var(--bg4); border-color: var(--accent); }
   .drop-zone .dz-icon { font-size: 28px; display: block; margin-bottom: 8px; }
   .drop-zone p { font-size: 14px; color: var(--text2); }
   .drop-zone small { font-size: 12px; color: var(--text3); display: block; margin-top: 4px; }
-
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 0.5px solid var(--border2); border-radius: 8px; background: transparent; color: var(--text); font-size: 13px; cursor: pointer; font-family: inherit; transition: background 0.12s, border-color 0.12s; }
   .btn:hover { background: var(--bg4); border-color: var(--border2); }
   .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn.primary:hover { background: #3a7ae0; border-color: #3a7ae0; }
   .btn.sm { padding: 5px 11px; font-size: 12px; }
-
   .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
   .tab { padding: 5px 12px; font-size: 12px; border: 0.5px solid var(--border); border-radius: 8px; cursor: pointer; background: transparent; color: var(--text2); font-family: monospace; transition: background 0.1s; }
   .tab:hover { background: var(--bg4); }
   .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
   pre.cfg { font-size: 11.5px; max-height: 380px; overflow-y: auto; background: var(--bg); border: 0.5px solid var(--border); border-radius: 8px; padding: 14px; white-space: pre; font-family: 'Courier New', monospace; color: #a8d8a8; line-height: 1.6; }
-
   .switch-card { border: 0.5px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; background: var(--bg2); }
   .sw-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
   .sw-name { font-size: 15px; font-weight: 600; font-family: monospace; color: var(--text); }
   .sw-meta { font-size: 12px; color: var(--text2); margin-top: 3px; }
-
   .brand-select, .platform-select { font-size: 12px; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: 16px; padding: 4px 8px; cursor: pointer; font-family: inherit; margin-left: 4px; color: var(--text); }
   .brand-select:focus, .platform-select:focus { outline: none; border-color: var(--accent); }
-
   .pills { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
   .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; background: var(--blue-pill); color: var(--blue-text); border: 0.5px solid rgba(79,142,247,0.3); }
   .pill.trunk { background: var(--amber-bg); color: var(--amber); border-color: rgba(245,158,11,0.3); }
-
   .port-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
   .port-table th { text-align: left; font-weight: 500; color: var(--text3); font-size: 11px; padding: 4px 8px; border-bottom: 0.5px solid var(--border); }
   .port-table td { padding: 5px 8px; border-bottom: 0.5px solid var(--border); font-family: monospace; color: var(--text); vertical-align: middle; }
   .port-table tr:last-child td { border-bottom: none; }
   .port-table tr:hover td { background: var(--bg3); }
-
   .badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-family: sans-serif; }
   .badge.trunk  { background: var(--amber-bg); color: var(--amber); }
   .badge.access { background: var(--green-bg); color: var(--green); }
   .badge.sfp    { background: var(--purple-bg); color: var(--purple); }
-
   .err { font-size: 13px; color: var(--red); background: var(--red-bg); border: 0.5px solid rgba(240,106,106,0.25); border-radius: 8px; padding: 10px 14px; margin-top: 10px; }
-
   .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
   .hidden { display: none; }
-
   .format-note { background: var(--bg3); border: 0.5px solid rgba(79,142,247,0.2); border-radius: 8px; padding: 12px 14px; font-size: 12px; color: var(--blue-text); line-height: 1.6; margin-top: 12px; }
   .format-note code { font-family: monospace; background: var(--blue-pill); padding: 1px 4px; border-radius: 3px; color: var(--blue-text); }
-
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg2); }
   ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
-
   .global-bar { display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--bg3); border:0.5px solid var(--border); border-radius:8px; margin-bottom:14px; flex-wrap:wrap; }
-
   #valOverlay { background: rgba(0,0,0,0.7); }
   #valOverlay > div { background: var(--bg2); border: 0.5px solid var(--border2); color: var(--text); }
+  .lookup-modal { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: 12px; padding: 20px; max-width: 500px; width: 90%; margin: 0 auto; position: relative; }
+  .lookup-modal input { width: 100%; padding: 8px 12px; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: 8px; color: var(--text); font-size: 14px; margin-bottom: 12px; }
+  .lookup-result { padding: 8px 12px; border-bottom: 0.5px solid var(--border); cursor: pointer; }
+  .lookup-result:hover { background: var(--bg4); }
+  .lookup-result .model { font-family: monospace; font-weight: 600; }
+  .lookup-result .vendor { font-size: 11px; color: var(--text3); margin-left: 8px; }
+  .lookup-result .platform { font-size: 11px; color: var(--accent); }
 </style>
 </head>
 <body>
 <div class="container">
   <header>
     <h1>Multi‑Vendor Switch Config Generator 
-      <span class="badge-vendor">15+ Platform Profiles | Fixed ZIP Export</span>
+      <span class="badge-vendor">Model Lookup + Zyxel Support</span>
     </h1>
-    <p>Upload networking book CSV → generate vendor & platform‑specific CLI configs.</p>
+    <p>Upload CSV → search your switch model to auto‑select vendor/platform.</p>
   </header>
 
   <div class="card">
@@ -137,6 +108,7 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn" onclick="showValidation()">✓ Validate configs</button>
           <button class="btn primary" id="downloadZipBtn">📦 Download all as ZIP</button>
+          <button class="btn" onclick="openLookupModal()">🔍 Find Switch Model</button>
         </div>
       </div>
       <div class="global-bar">
@@ -152,6 +124,21 @@
     <div id="switchCards"></div>
   </div>
 
+  <!-- Model lookup modal -->
+  <div id="lookupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;overflow-y:auto;padding:2rem 1rem;">
+    <div class="lookup-modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="font-size:16px;font-weight:600;margin:0;">Switch Model Lookup</h3>
+        <button class="btn sm" onclick="closeLookupModal()">✕</button>
+      </div>
+      <input type="text" id="modelSearch" placeholder="Enter model number (e.g., GS728TP, Catalyst 2960, XGS2210)" autocomplete="off">
+      <div id="lookupResults" style="max-height:300px;overflow-y:auto;"></div>
+      <div class="format-note" style="margin-top:12px;font-size:11px;">
+        <strong>📋 Tip:</strong> Click a result to apply the suggested vendor/platform to the currently selected switch (highlighted in the tabs above).
+      </div>
+    </div>
+  </div>
+
   <!-- Validation panel -->
   <div id="valOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;overflow-y:auto;padding:2rem 1rem;">
     <div style="max-width:760px;margin:0 auto;background:var(--bg2);border:0.5px solid var(--border2);border-radius:14px;padding:24px 28px;position:relative;">
@@ -164,107 +151,190 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
-// ========== ZIP HELPER ==========
-const MiniZip = (() => {
-  const T = new Uint32Array(256);
-  for (let i = 0; i < 256; i++) { 
-    let c = i; 
-    for (let j = 0; j < 8; j++) 
-      c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; 
-    T[i] = c; 
-  }
-  
-  function crc32(b) { 
-    let c = 0xFFFFFFFF; 
-    for (let i = 0; i < b.length; i++) 
-      c = T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); 
-    return (c ^ 0xFFFFFFFF) >>> 0; 
-  }
-  
-  function u16(n) { return [n & 0xFF, (n >> 8) & 0xFF]; }
-  function u32(n) { return [n & 0xFF, (n >> 8) & 0xFF, (n >> 16) & 0xFF, (n >> 24) & 0xFF]; }
-  
-  function cat(...a) {
-    const t = a.reduce((s, x) => s + x.length, 0);
-    const o = new Uint8Array(t);
-    let f = 0;
-    for (const x of a) { o.set(x, f); f += x.length; }
-    return o;
-  }
-  
-  return { 
-    generate(files) {
-      const enc = new TextEncoder();
-      const entries = [], parts = [];
-      let off = 0;
-      const n = new Date();
-      const dd = ((n.getFullYear() - 1980) << 9) | ((n.getMonth() + 1) << 5) | n.getDate();
-      const dt = (n.getHours() << 11) | (n.getMinutes() << 5) | Math.floor(n.getSeconds() / 2);
-      
-      for (const [name, content] of files) {
-        const data = enc.encode(content);
-        const crc = crc32(data);
-        const nb = enc.encode(name);
-        
-        const loc = new Uint8Array([
-          0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00,
-          ...u16(dt), ...u16(dd), ...u32(crc), ...u32(data.length), ...u32(data.length),
-          ...u16(nb.length), 0x00, 0x00, ...nb
-        ]);
-        
-        entries.push({ nb, crc, size: data.length, offset: off });
-        parts.push(loc, data);
-        off += loc.length + data.length;
-      }
-      
-      const cdp = [];
-      let cds = 0;
-      for (const e of entries) {
-        const cd = new Uint8Array([
-          0x50, 0x4B, 0x01, 0x02, 0x14, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00,
-          ...u16(0), ...u16(0), ...u32(e.crc), ...u32(e.size), ...u32(e.size),
-          ...u16(e.nb.length), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-          ...u32(e.offset), ...e.nb
-        ]);
-        cdp.push(cd);
-        cds += cd.length;
-      }
-      
-      const eocd = new Uint8Array([
-        0x50, 0x4B, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00,
-        ...u16(entries.length), ...u16(entries.length), ...u32(cds), ...u32(off), 0x00, 0x00
-      ]);
-      
-      return cat(...parts, ...cdp, eocd);
+// ========== PLATFORM DATABASE (must be first) ==========
+const platformDB = {
+  cisco: {
+    ios: {
+      name: "IOS Classic", comment: '!', interface: (p, sfp) => sfp ? `TenGigabitEthernet0/1/${p}` : `GigabitEthernet0/1/${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
+      mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, `!`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode rapid-pvst`,
+      globalCommands: [`no ip domain-lookup`, `ip domain-name local`, `line vty 0 15`, ` exec-timeout 30 0`, ` transport input ssh`],
+      save: `write memory`
+    },
+    ios_xe: {
+      name: "IOS-XE", comment: '!', interface: (p, sfp) => sfp ? `TenGigabitEthernet1/0/${p}` : `GigabitEthernet1/0/${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
+      mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, `!`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode rapid-pvst`,
+      globalCommands: [`no ip domain-lookup`, `ip domain-name local`, `line vty 0 15`, ` exec-timeout 30 0`, ` transport input ssh`],
+      save: `write memory`
+    },
+    nxos: {
+      name: "NX-OS", comment: '!', interface: (p, sfp) => `Ethernet1/${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
+      mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip}/${maskToCidr(mask)}`, ` no shutdown`, `!`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree port type edge`, stormControl: (iface) => `storm-control broadcast level 20.00`,
+      spanningTreeMode: `spanning-tree mode rapid-pvst`,
+      globalCommands: [`feature ssh`, `feature interface-vlan`], save: `copy running-config startup-config`
+    },
+    ios_xr: {
+      name: "IOS-XR", comment: '!', interface: (p, sfp) => sfp ? `TenGigE0/0/0/${p}` : `GigabitEthernet0/0/0/${p}`,
+      vlanCreate: (id, name) => [`! VLAN ${id} (${name})`, `!`],
+      mgmtInterface: (vid, ip, mask) => [`interface BVI${vid}`, ` ipv4 address ${ip} ${mask}`, ` no shutdown`, `!`],
+      trunkAllowed: (iface, vlans) => `encapsulation dot1q ${vlans.split(',')[0]}`, accessVlan: (iface, vid) => `encapsulation dot1q ${vid}`,
+      portfast: (iface) => `spanning-tree portfast`, stormControl: (iface) => `storm-control broadcast pps 1000`,
+      spanningTreeMode: `spanning-tree mode mst`, globalCommands: [`! L2 configuration via l2vpn`], save: `commit`
     }
-  };
-})();
+  },
+  netgear: {
+    prosafe: { name: "ProSafe", comment: '!', interface: (p, sfp) => sfp ? `tengigabitethernet 0/${p}` : `gigabitethernet 0/${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name "${name}"`, ` exit`],
+      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, ` exit`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast enable`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode rstp`, globalCommands: [`no ip telnet server enable`, `ip ssh server enable`], save: `write memory`
+    },
+    mseries: { name: "M4300/M6100", comment: '!', interface: (p, sfp) => sfp ? `tengigabitethernet 0/${p}` : `gigabitethernet 0/${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name "${name}"`, ` exit`],
+      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, ` exit`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast enable`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode rstp`, globalCommands: [`no ip telnet server enable`, `ip ssh server enable`], save: `write memory`
+    },
+    sseries: { name: "S350/S3300", comment: '!', interface: (p, sfp) => sfp ? `tengigabitethernet 0/${p}` : `gigabitethernet 0/${p}`,
+      vlanCreate: (id, name) => [`vlan database`, ` vlan ${id} name "${name}"`, ` exit`],
+      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, ` exit`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan add ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast enable`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode rstp`, globalCommands: [`no ip telnet server enable`, `ip ssh server enable`], save: `write memory`
+    },
+    fsm700: { name: "FSM700 series", comment: '!', interface: (p, sfp) => sfp ? `tengigabitethernet 0/${p}` : `gigabitethernet 0/${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name "${name}"`, ` exit`],
+      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, ` exit`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast enable`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode rstp`, globalCommands: [`no ip telnet server enable`, `ip ssh server enable`], save: `write memory`
+    }
+  },
+  arista: {
+    eos: { name: "EOS", comment: '!', interface: (p, sfp) => `Ethernet${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
+      mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip}/${maskToCidr(mask)}`, ` no shutdown`, `!`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode mstp`, globalCommands: [`management api http-commands`, ` no shutdown`], save: `write memory`
+    }
+  },
+  juniper: {
+    junos: { name: "JunOS", comment: '#', interface: (p, sfp) => sfp ? `xe-0/0/${p}` : `ge-0/0/${p}`,
+      vlanCreate: (id, name) => [`set vlans vlan${id} vlan-id ${id}`, `set vlans vlan${id} description "${name}"`],
+      mgmtInterface: (vid, ip, mask) => [`set interfaces vlan unit ${vid} family inet address ${ip}/${maskToCidr(mask)}`, `set vlans vlan${vid} l3-interface vlan.${vid}`],
+      trunkAllowed: (iface, vlans) => `set interfaces ${iface} unit 0 family ethernet-switching vlan members [ ${vlans.split(',').map(v => `vlan${v}`).join(' ')} ]`,
+      accessVlan: (iface, vid) => `set interfaces ${iface} unit 0 family ethernet-switching vlan members vlan${vid}`,
+      portfast: (iface) => `set protocols rstp interface ${iface} edge`, stormControl: (iface) => `set forwarding-options storm-control interface ${iface}`,
+      spanningTreeMode: `set protocols rstp`, globalCommands: [], save: `commit`
+    }
+  },
+  aruba: {
+    aruba_cx: { name: "ArubaOS-CX", comment: '#', interface: (p, sfp) => sfp ? `interface 1/1/${p}` : `interface 1/1/${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
+      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip}/${maskToCidr(mask)}`, ` no shutdown`, `!`],
+      trunkAllowed: (iface, vlans) => `vlan trunk allowed ${vlans}`,
+      accessVlan: (iface, vid) => `vlan access ${vid}`,
+      portfast: (iface) => `spanning-tree port-type admin-edge`, stormControl: (iface) => `broadcast-limit 20`,
+      spanningTreeMode: `spanning-tree mode mstp`, globalCommands: [`ip ssh`, `no telnet-server`], save: `write memory`
+    },
+    comware: { name: "Comware", comment: '#', interface: (p, sfp) => sfp ? `Ten-GigabitEthernet1/0/${p}` : `GigabitEthernet1/0/${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, ` quit`],
+      mgmtInterface: (vid, ip, mask) => [`interface Vlan-interface${vid}`, ` ip address ${ip} ${mask}`, ` quit`],
+      trunkAllowed: (iface, vlans) => `port trunk permit vlan ${vlans}`,
+      accessVlan: (iface, vid) => `port access vlan ${vid}`,
+      portfast: (iface) => `stp edged-port enable`, stormControl: (iface) => `broadcast-suppression 20`,
+      spanningTreeMode: `stp mode rstp`, globalCommands: [`ssh server enable`, `undo telnet server enable`], save: `save`
+    }
+  },
+  dell: {
+    os10: { name: "OS10", comment: '!', interface: (p, sfp) => `ethernet1/1/${p}`,
+      vlanCreate: (id, name) => [`interface vlan ${id}`, ` name ${name}`, ` no shutdown`, ` exit`],
+      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip}/${maskToCidr(mask)}`, ` no shutdown`, ` exit`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast`, stormControl: (iface) => `storm-control broadcast pps 200`,
+      spanningTreeMode: `spanning-tree mode rstp`, globalCommands: [`ip ssh server enable`], save: `write memory`
+    },
+    ftos: { name: "FTOS", comment: '!', interface: (p, sfp) => sfp ? `TenGigabitEthernet 1/1/${p}` : `GigabitEthernet 1/1/${p}`,
+      vlanCreate: (id, name) => [`interface vlan ${id}`, ` description ${name}`, ` no shutdown`, ` exit`],
+      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, ` exit`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree rstp edge-port`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode rstp`, globalCommands: [`ip ssh server enable`], save: `write memory`
+    }
+  },
+  zyxel: {
+    zynos: { name: "ZyNOS (Classic)", comment: '!', interface: (p, sfp) => sfp ? `interface port-channel ${p}` : `interface port-channel ${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name "${name}"`, ` exit`],
+      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, ` exit`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode rstp`, globalCommands: [`no ip telnet server`, `ip ssh server`], save: `write memory`
+    },
+    vantage: { name: "Vantage (Newer)", comment: '!', interface: (p, sfp) => sfp ? `interface tengigabitethernet 0/${p}` : `interface gigabitethernet 0/${p}`,
+      vlanCreate: (id, name) => [`vlan ${id}`, ` name "${name}"`, ` exit`],
+      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, ` exit`],
+      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
+      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
+      portfast: (iface) => `spanning-tree portfast`, stormControl: (iface) => `storm-control broadcast level 20`,
+      spanningTreeMode: `spanning-tree mode rstp`, globalCommands: [`no ip telnet server`, `ip ssh server`], save: `write memory`
+    }
+  }
+};
 
-// ========== CSV PARSER ==========
+// ========== HELPER FUNCTIONS ==========
+function maskToCidr(mask) {
+  if (!mask) return '24';
+  if (/^\d+$/.test(mask.trim())) return mask.trim();
+  let bits = 0;
+  mask.split('.').forEach(oct => {
+    let n = parseInt(oct);
+    while (n & 0x80) { bits++; n = (n << 1) & 0xFF; }
+  });
+  return bits.toString();
+}
+
+function vlanId(s) { const m = (s || '').match(/^(\d+)/); return m ? m[1] : null; }
+function vlanName(s) { return (s || '').replace(/^\d+\s*\|\s*/, '').trim(); }
+function slug(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+// ========== CSV PARSING ==========
 function parseCSV(text) {
-  const rows = [];
-  let cur = [], field = '', inQuote = false;
+  const rows = []; let cur = [], field = '', inQuote = false;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
-    if (ch === '"') {
-      inQuote = !inQuote;
-    } else if (ch === ',' && !inQuote) {
-      cur.push(field.trim());
-      field = '';
-    } else if (ch === '\n' && !inQuote) {
-      cur.push(field.trim());
-      rows.push(cur);
-      cur = [];
-      field = '';
-    } else {
-      field += ch;
-    }
+    if (ch === '"') inQuote = !inQuote;
+    else if (ch === ',' && !inQuote) { cur.push(field.trim()); field = ''; }
+    else if (ch === '\n' && !inQuote) { cur.push(field.trim()); rows.push(cur); cur = []; field = ''; }
+    else field += ch;
   }
-  if (field !== '' || cur.length) {
-    cur.push(field.trim());
-    rows.push(cur);
-  }
+  if (field !== '' || cur.length) { cur.push(field.trim()); rows.push(cur); }
   return rows.filter(r => r.some(c => c !== ''));
 }
 
@@ -276,39 +346,25 @@ function parseNetworkBook(text) {
   const rows = parseCSV(text);
   const switches = [];
   let i = 0;
-  
   while (i < rows.length) {
     const row = rows[i];
     const nameColIdx = findColumn(row, 'Name:');
     const switchColIdx = findColumn(row, 'Switch:');
-    
     if (nameColIdx !== -1 || switchColIdx !== -1) {
       const sw = { name: '', ports: {}, brand: 'cisco', platform: 'ios' };
       if (nameColIdx !== -1) sw.name = (row[nameColIdx + 1] || '').trim();
       else if (switchColIdx !== -1) sw.name = (row[switchColIdx + 1] || '').trim();
       if (!sw.name) { i++; continue; }
-      
       let j = i + 1;
       while (j < rows.length) {
         const r = rows[j];
-        
-        // Metadata extraction
-        const ipCol = findColumn(r, 'IP Address:');
-        if (ipCol !== -1) sw.ip = (r[ipCol + 1] || '').trim();
-        const maskCol = findColumn(r, 'Subnet Mask:');
-        if (maskCol !== -1) sw.subnet = (r[maskCol + 1] || '').trim();
-        const mgmtCol = findColumn(r, 'MGMT Interface:');
-        if (mgmtCol !== -1) sw.mgmtVlan = (r[mgmtCol + 1] || '').trim();
-        const modelCol = findColumn(r, 'Model:');
-        if (modelCol !== -1) sw.model = (r[modelCol + 1] || '').trim();
-        const shortCol = findColumn(r, 'Short Name:');
-        if (shortCol !== -1) sw.shortName = (r[shortCol + 1] || '').trim();
-        const locCol = findColumn(r, 'Location:');
-        if (locCol !== -1) sw.location = (r[locCol + 1] || '').trim();
-        const rackCol = findColumn(r, 'Rack:');
-        if (rackCol !== -1) sw.rack = (r[rackCol + 1] || '').trim();
-        
-        // Simple port format
+        const ipCol = findColumn(r, 'IP Address:'); if (ipCol !== -1) sw.ip = (r[ipCol + 1] || '').trim();
+        const maskCol = findColumn(r, 'Subnet Mask:'); if (maskCol !== -1) sw.subnet = (r[maskCol + 1] || '').trim();
+        const mgmtCol = findColumn(r, 'MGMT Interface:'); if (mgmtCol !== -1) sw.mgmtVlan = (r[mgmtCol + 1] || '').trim();
+        const modelCol = findColumn(r, 'Model:'); if (modelCol !== -1) sw.model = (r[modelCol + 1] || '').trim();
+        const shortCol = findColumn(r, 'Short Name:'); if (shortCol !== -1) sw.shortName = (r[shortCol + 1] || '').trim();
+        const locCol = findColumn(r, 'Location:'); if (locCol !== -1) sw.location = (r[locCol + 1] || '').trim();
+        const rackCol = findColumn(r, 'Rack:'); if (rackCol !== -1) sw.rack = (r[rackCol + 1] || '').trim();
         const portCol = findColumn(r, 'Port');
         if (portCol !== -1) {
           const vlanCol = findColumn(r, 'VLAN');
@@ -322,207 +378,71 @@ function parseNetworkBook(text) {
             sw.ports[portVal] = { vlan, use, portType: pt };
           }
         }
-        
-        j++;
-        if (j < rows.length) {
-          const nextRow = rows[j];
-          if (findColumn(nextRow, 'Name:') !== -1 || findColumn(nextRow, 'Switch:') !== -1) break;
+        // Block format detection
+        if (findColumn(r, 'Port') !== -1 && j > 0) {
+          const useRow = rows[j-1], vlanRow = rows[j+1], ptRow = rows[j+3];
+          if (useRow && vlanRow && ptRow && findColumn(useRow, 'Use') !== -1 && findColumn(vlanRow, 'VLAN') !== -1 && findColumn(ptRow, 'Port Type') !== -1) {
+            const pCol = findColumn(r, 'Port'), uCol = findColumn(useRow, 'Use'), vCol = findColumn(vlanRow, 'VLAN'), tCol = findColumn(ptRow, 'Port Type');
+            for (let ci = pCol+1; ci < r.length; ci++) {
+              const pn = r[ci]; if (!pn || pn === 'nan') continue;
+              const offset = ci - pCol;
+              const get = (row, colIdx) => { if (colIdx === -1) return ''; const val = row[colIdx + offset]; return (val && val !== 'nan') ? val : ''; };
+              sw.ports[pn] = { vlan: get(vlanRow, vCol), use: get(useRow, uCol), portType: get(ptRow, tCol) };
+            }
+          }
         }
+        j++;
+        if (j < rows.length && (findColumn(rows[j], 'Name:') !== -1 || findColumn(rows[j], 'Switch:') !== -1)) break;
       }
       switches.push(sw);
       i = j;
-    } else {
-      i++;
-    }
+    } else i++;
   }
   return switches;
 }
 
-// ========== HELPERS ==========
-function maskToCidr(mask) {
-  if (!mask) return '24';
-  if (/^\d+$/.test(mask.trim())) return mask.trim();
-  return mask.split('.').reduce((acc, oct) => {
-    let n = parseInt(oct);
-    let bits = 0;
-    while (n & 0x80) { bits++; n = (n << 1) & 0xFF; }
-    return acc + bits;
-  }, 0).toString();
-}
-
-function vlanId(s) { 
-  const m = (s || '').match(/^(\d+)/); 
-  return m ? m[1] : null; 
-}
-
-function vlanName(s) { 
-  return (s || '').replace(/^\d+\s*\|\s*/, '').trim(); 
-}
-
-function slug(s) { 
-  return (s || '').toLowerCase().replace(/\s+/g, '-'); 
-}
-
-// ========== PLATFORM DATABASE (simplified but working) ==========
-const platformDB = {
-  cisco: {
-    ios: {
-      name: "IOS Classic",
-      interface: (p, sfp) => sfp ? `TenGigabitEthernet0/1/${p}` : `GigabitEthernet0/1/${p}`,
-      vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
-      mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, `!`],
-      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
-      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
-      portfast: (iface) => `spanning-tree portfast`,
-      stormControl: (iface) => `storm-control broadcast level 20`,
-      spanningTreeMode: `spanning-tree mode rapid-pvst`,
-      globalCommands: [`no ip domain-lookup`, `ip domain-name local`, `line vty 0 15`, ` exec-timeout 30 0`, ` transport input ssh`],
-      save: `write memory`
-    },
-    nxos: {
-      name: "NX-OS",
-      interface: (p, sfp) => `Ethernet1/${p}`,
-      vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
-      mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip}/${maskToCidr(mask)}`, ` no shutdown`, `!`],
-      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
-      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
-      portfast: (iface) => `spanning-tree port type edge`,
-      stormControl: (iface) => `storm-control broadcast level 20.00`,
-      spanningTreeMode: `spanning-tree mode rapid-pvst`,
-      globalCommands: [`feature ssh`, `feature interface-vlan`],
-      save: `copy running-config startup-config`
-    }
-  },
-  netgear: {
-    prosafe: {
-      name: "ProSafe",
-      interface: (p, sfp) => sfp ? `tengigabitethernet 0/${p}` : `gigabitethernet 0/${p}`,
-      vlanCreate: (id, name) => [`vlan ${id}`, ` name "${name}"`, ` exit`],
-      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, ` exit`],
-      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
-      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
-      portfast: (iface) => `spanning-tree portfast enable`,
-      stormControl: (iface) => `storm-control broadcast level 20`,
-      spanningTreeMode: `spanning-tree mode rstp`,
-      globalCommands: [`no ip telnet server enable`, `ip ssh server enable`],
-      save: `write memory`
-    },
-    mseries: {
-      name: "M4300/M6100",
-      interface: (p, sfp) => sfp ? `tengigabitethernet 0/${p}` : `gigabitethernet 0/${p}`,
-      vlanCreate: (id, name) => [`vlan ${id}`, ` name "${name}"`, ` exit`],
-      mgmtInterface: (vid, ip, mask) => [`interface vlan ${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, ` exit`],
-      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
-      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
-      portfast: (iface) => `spanning-tree portfast enable`,
-      stormControl: (iface) => `storm-control broadcast level 20`,
-      spanningTreeMode: `spanning-tree mode rstp`,
-      globalCommands: [`no ip telnet server enable`, `ip ssh server enable`],
-      save: `write memory`
-    }
-  },
-  arista: {
-    eos: {
-      name: "EOS",
-      interface: (p, sfp) => `Ethernet${p}`,
-      vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
-      mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip}/${maskToCidr(mask)}`, ` no shutdown`, `!`],
-      trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
-      accessVlan: (iface, vid) => `switchport access vlan ${vid}`,
-      portfast: (iface) => `spanning-tree portfast`,
-      stormControl: (iface) => `storm-control broadcast level 20`,
-      spanningTreeMode: `spanning-tree mode mstp`,
-      globalCommands: [`management api http-commands`, ` no shutdown`],
-      save: `write memory`
-    }
-  },
-  juniper: {
-    junos: {
-      name: "JunOS",
-      interface: (p, sfp) => sfp ? `xe-0/0/${p}` : `ge-0/0/${p}`,
-      vlanCreate: (id, name) => [`set vlans vlan${id} vlan-id ${id}`, `set vlans vlan${id} description "${name}"`],
-      mgmtInterface: (vid, ip, mask) => [`set interfaces vlan unit ${vid} family inet address ${ip}/${maskToCidr(mask)}`, `set vlans vlan${vid} l3-interface vlan.${vid}`],
-      trunkAllowed: (iface, vlans) => `set interfaces ${iface} unit 0 family ethernet-switching vlan members [ ${vlans.split(',').map(v => `vlan${v}`).join(' ')} ]`,
-      accessVlan: (iface, vid) => `set interfaces ${iface} unit 0 family ethernet-switching vlan members vlan${vid}`,
-      portfast: (iface) => `set protocols rstp interface ${iface} edge`,
-      stormControl: (iface) => `set forwarding-options storm-control interface ${iface}`,
-      spanningTreeMode: `set protocols rstp`,
-      globalCommands: [],
-      save: `commit`
-    }
-  }
-};
-
+// ========== CONFIG GENERATION ==========
 function generateConfig(sw) {
   const spec = platformDB[sw.brand]?.[sw.platform];
   if (!spec) return `# Error: no spec for ${sw.brand}/${sw.platform}`;
-  
-  const L = [];
-  const ind = s => `  ${s}`;
-  const bar = '! ' + '='.repeat(60);
-  
-  L.push(bar);
-  L.push(`! ${spec.name} Config : ${sw.name}`);
-  L.push(`! Generated : ${new Date().toLocaleString()}`);
-  L.push(bar, '');
-  
-  L.push('! --- System ---');
-  L.push(`hostname ${slug(sw.name)}`);
-  spec.globalCommands.forEach(cmd => L.push(cmd));
-  L.push('');
-  
+  const L = [], ind = s => `  ${s}`;
+  const bar = (spec.comment || '!') + ' ' + '='.repeat(60);
+  L.push(bar, `${spec.comment || '!'} ${spec.name} Config : ${sw.name}`, bar, '');
+  L.push('! --- System ---', `hostname ${slug(sw.name)}`);
+  spec.globalCommands.forEach(cmd => L.push(cmd)); L.push('');
   const vlanMap = new Map();
   Object.values(sw.ports).forEach(pc => {
     if (!pc.vlan || pc.vlan === '--TRUNK--') return;
-    const id = vlanId(pc.vlan);
-    const nm = vlanName(pc.vlan);
+    const id = vlanId(pc.vlan), nm = vlanName(pc.vlan);
     if (id) vlanMap.set(id, nm);
   });
-  
   if (vlanMap.size) {
     L.push('! --- VLANs ---');
-    vlanMap.forEach((nm, id) => {
-      spec.vlanCreate(id, nm).forEach(line => L.push(line));
-    });
+    vlanMap.forEach((nm, id) => spec.vlanCreate(id, nm).forEach(line => L.push(line)));
     L.push('');
   }
-  
   const mgmtMatch = sw.mgmtVlan ? sw.mgmtVlan.match(/\d+/) : null;
   if (sw.ip && mgmtMatch) {
     L.push('! --- Management Interface ---');
     spec.mgmtInterface(mgmtMatch[0], sw.ip, sw.subnet || '255.255.255.0').forEach(line => L.push(line));
     L.push('');
   }
-  
   const trunkPorts = [], accessMap = {};
   Object.entries(sw.ports).forEach(([port, pc]) => {
-    if (pc.vlan === '--TRUNK--') {
-      trunkPorts.push({ port, pc });
-      return;
-    }
-    const id = vlanId(pc.vlan);
-    if (id) {
-      if (!accessMap[id]) accessMap[id] = [];
-      accessMap[id].push({ port, pc });
-    }
+    if (pc.vlan === '--TRUNK--') trunkPorts.push({ port, pc });
+    else { const id = vlanId(pc.vlan); if (id) (accessMap[id] = accessMap[id] || []).push({ port, pc }); }
   });
   const allVlans = [...vlanMap.keys()].join(',');
-  
   if (trunkPorts.length) {
     L.push('! --- Trunk Ports ---');
     trunkPorts.forEach(({ port, pc }) => {
       const sfp = (pc.portType || '').toLowerCase().includes('sfp');
       const iface = spec.interface(port, sfp);
-      L.push(`interface ${iface}`);
-      L.push(ind('description "Uplink/Trunk"'));
-      L.push(ind('switchport mode trunk'));
+      L.push(`interface ${iface}`, ind('description "Uplink/Trunk"'), ind('switchport mode trunk'));
       if (allVlans) L.push(ind(spec.trunkAllowed(iface, allVlans)));
-      L.push(ind('no shutdown'));
-      L.push('exit');
-    });
-    L.push('');
+      L.push(ind('no shutdown'), 'exit');
+    }); L.push('');
   }
-  
   if (Object.keys(accessMap).length) {
     L.push('! --- Access Ports ---');
     Object.entries(accessMap).forEach(([vid, entries]) => {
@@ -530,39 +450,142 @@ function generateConfig(sw) {
       entries.forEach(({ port, pc }) => {
         const sfp = (pc.portType || '').toLowerCase().includes('sfp');
         const iface = spec.interface(port, sfp);
-        L.push(`interface ${iface}`);
-        L.push(ind(`description "${pc.use || ('VLAN ' + vid)}"`));
-        L.push(ind('switchport mode access'));
-        L.push(ind(spec.accessVlan(iface, vid)));
+        L.push(`interface ${iface}`, ind(`description "${pc.use || ('VLAN ' + vid)}"`), ind('switchport mode access'), ind(spec.accessVlan(iface, vid)));
         if (spec.portfast) L.push(ind(spec.portfast(iface)));
         if (spec.stormControl) L.push(ind(spec.stormControl(iface)));
-        L.push(ind('no shutdown'));
-        L.push('exit');
+        L.push(ind('no shutdown'), 'exit');
       });
-    });
-    L.push('');
+    }); L.push('');
   }
-  
-  L.push('! --- Spanning Tree ---');
-  if (spec.spanningTreeMode) L.push(spec.spanningTreeMode);
-  L.push('');
-  L.push('! --- Save ---');
-  L.push(spec.save);
-  L.push('', `! End of config: ${sw.name}`);
-  
+  L.push('! --- Spanning Tree ---', spec.spanningTreeMode || '!', '', '! --- Save ---', spec.save, '', `${spec.comment || '!'} End of config: ${sw.name}`);
   return L.join('\n');
 }
 
-// ========== UI and state ==========
+// ========== UI STATE ==========
 let switches = [], configs = {}, activeTab = 0;
 
 function regenerateAllConfigs() {
   configs = {};
+  switches.forEach(sw => { configs[sw.name] = generateConfig(sw); });
+}
+
+function render() {
+  if (!switches.length) { document.getElementById('results').classList.add('hidden'); return; }
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('switchCount').textContent = `${switches.length} switch${switches.length !== 1 ? 'es' : ''} found`;
+  populateGlobalSelects();
+  renderTabs(); renderPreview(); renderCards();
+}
+function renderTabs() {
+  const el = document.getElementById('tabs'); el.innerHTML = '';
+  switches.forEach((sw, idx) => {
+    const btn = document.createElement('button'); btn.className = 'tab' + (idx === activeTab ? ' active' : '');
+    btn.textContent = sw.name; btn.onclick = () => { activeTab = idx; renderTabs(); renderPreview(); };
+    el.appendChild(btn);
+  });
+}
+function renderPreview() { document.getElementById('cfgPreview').textContent = switches[activeTab] ? configs[switches[activeTab].name] : ''; }
+function renderCards() {
+  const container = document.getElementById('switchCards'); container.innerHTML = '';
   switches.forEach(sw => {
-    try {
-      configs[sw.name] = generateConfig(sw);
-    } catch(e) {
-      console.error(`Error generating config for ${sw.name}:`, e);
-      configs[sw.name] = `# Error generating config: ${e.message}`;
-    }
- 
+    const vlanMap = new Map(), trunkPorts = [], accessPorts = [];
+    Object.entries(sw.ports).forEach(([port, pc]) => {
+      if (pc.vlan === '--TRUNK--') trunkPorts.push({ port, pc });
+      else { const id = vlanId(pc.vlan), nm = vlanName(pc.vlan); if (id) { vlanMap.set(id, nm); accessPorts.push({ port, id, pc }); } }
+    });
+    const allPorts = [...trunkPorts.map(({port,pc}) => ({ port, type: 'trunk', id: null, pc })),
+                      ...accessPorts.map(({port,id,pc}) => ({ port, type: 'access', id, pc }))]
+                     .sort((a,b) => parseInt(a.port) - parseInt(b.port));
+    const card = document.createElement('div'); card.className = 'switch-card';
+    card.innerHTML = `
+      <div class="sw-header">
+        <div><div class="sw-name">${escapeHtml(sw.name)}</div><div class="sw-meta">${[sw.model, sw.ip, sw.location, sw.rack].filter(Boolean).join(' &nbsp;|&nbsp; ')}</div></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select class="brand-select">${Object.keys(platformDB).map(b => `<option value="${b}" ${sw.brand===b?'selected':''}>${b.charAt(0).toUpperCase()+b.slice(1)}</option>`).join('')}</select>
+          <select class="platform-select">${Object.keys(platformDB[sw.brand]).map(p => `<option value="${p}" ${sw.platform===p?'selected':''}>${platformDB[sw.brand][p].name}</option>`).join('')}</select>
+          <button class="btn sm download-single">⬇ .cfg</button>
+        </div>
+      </div>
+      <div class="pills">${[...vlanMap.entries()].map(([id,nm]) => `<span class="pill">VLAN ${id}: ${escapeHtml(nm)}</span>`).join('')}${trunkPorts.length ? `<span class="pill trunk">${trunkPorts.length} trunk port${trunkPorts.length>1?'s':''}</span>` : ''}</div>
+      <table class="port-table"><thead><tr><th>Port</th><th>Type</th><th>VLAN</th><th>Connected device</th></tr></thead><tbody>
+        ${allPorts.map(({port,type,id,pc}) => `<tr><td>${escapeHtml(port)}</td><td><span class="badge ${type}${(pc.portType||'').toLowerCase().includes('sfp')?' sfp':''}">${escapeHtml(pc.portType||'RJ45')}${type==='trunk'?' trunk':''}</span></td><td>${type==='trunk'?'<span style="color:var(--text3)">all vlans</span>':(id?`${id} — ${escapeHtml(vlanMap.get(id)||'')}`:'—')}</td><td style="color:var(--text2);font-family:sans-serif">${escapeHtml(pc.use||'—')}</td></tr>`).join('')}
+      </tbody></table>`;
+    const brandSel = card.querySelector('.brand-select'), platSel = card.querySelector('.platform-select');
+    brandSel.addEventListener('change', (e) => { sw.brand = e.target.value; const newPlats = Object.keys(platformDB[sw.brand]); sw.platform = newPlats[0]; platSel.innerHTML = newPlats.map(p => `<option value="${p}">${platformDB[sw.brand][p].name}</option>`).join(''); regenerateAllConfigs(); render(); activeTab = Math.min(activeTab, switches.length-1); renderTabs(); renderPreview(); });
+    platSel.addEventListener('change', (e) => { sw.platform = e.target.value; regenerateAllConfigs(); render(); activeTab = Math.min(activeTab, switches.length-1); renderTabs(); renderPreview(); });
+    card.querySelector('.download-single').addEventListener('click', () => downloadSingle(sw.name));
+    container.appendChild(card);
+  });
+}
+function downloadSingle(name) {
+  const sw = switches.find(s => s.name === name);
+  const blob = new Blob([configs[name]], {type: 'text/plain'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${slug(sw.name)}.cfg`; a.click(); URL.revokeObjectURL(a.href);
+}
+async function downloadZip() {
+  if (!window.JSZip) { alert('Loading ZIP library, please wait...'); await new Promise(r => setTimeout(r, 1000)); if (!window.JSZip) { alert('Failed to load JSZip'); return; } }
+  const zip = new JSZip();
+  switches.forEach(sw => zip.file(`${slug(sw.name)}.cfg`, configs[sw.name]));
+  const blob = await zip.generateAsync({ type: "blob" });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'switch_configs.zip'; a.click(); URL.revokeObjectURL(a.href);
+}
+function populateGlobalSelects() {
+  const gb = document.getElementById('globalBrand'), gp = document.getElementById('globalPlatform');
+  if (!gb || !gp) return;
+  gb.innerHTML = Object.keys(platformDB).map(b => `<option value="${b}">${b.charAt(0).toUpperCase()+b.slice(1)}</option>`).join('');
+  gp.innerHTML = Object.keys(platformDB[gb.value]).map(p => `<option value="${p}">${platformDB[gb.value][p].name}</option>`).join('');
+}
+function onGlobalBrandChange() {
+  const brand = document.getElementById('globalBrand').value, gp = document.getElementById('globalPlatform');
+  gp.innerHTML = Object.keys(platformDB[brand]).map(p => `<option value="${p}">${platformDB[brand][p].name}</option>`).join('');
+}
+function onGlobalPlatformChange() {}
+function applyGlobalVendor() {
+  const brand = document.getElementById('globalBrand').value, platform = document.getElementById('globalPlatform').value;
+  switches.forEach(sw => { sw.brand = brand; sw.platform = platform; });
+  regenerateAllConfigs(); render();
+}
+let loadedFiles = {};
+const dropZone = document.getElementById('dropZone'), fi = document.getElementById('fi');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFiles(Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.csv'))); });
+fi.addEventListener('change', e => handleFiles(Array.from(e.target.files)));
+function handleFiles(files) { if (!files.length) return; let completed = 0, results = {}; files.forEach(file => { const reader = new FileReader(); reader.onload = e => { results[file.name] = e.target.result; if (++completed === files.length) processAllFiles(results); }; reader.readAsText(file); }); }
+function processAllFiles(fileContents) { let anyNew = false; Object.entries(fileContents).forEach(([fname, text]) => { try { const parsed = parseNetworkBook(text); if (parsed.length) { loadedFiles[fname] = parsed; anyNew = true; } else document.getElementById('errMsg').innerHTML += `<div class="err">⚠️ No switches in ${escapeHtml(fname)}.</div>`; } catch(err) { document.getElementById('errMsg').innerHTML += `<div class="err">⚠️ Error reading ${escapeHtml(fname)}: ${err.message}</div>`; } }); if (anyNew) { renderFileList(); rebuildSwitches(); } }
+function rebuildSwitches() { const allParsed = []; Object.values(loadedFiles).forEach(list => list.forEach(sw => { if (Object.keys(sw.ports).length) allParsed.push(sw); })); switches = allParsed; if (!switches.length) { document.getElementById('results').classList.add('hidden'); return; } switches.forEach(sw => { if (!sw.brand) sw.brand = 'cisco'; if (!sw.platform || !platformDB[sw.brand]?.[sw.platform]) sw.platform = Object.keys(platformDB[sw.brand])[0]; }); regenerateAllConfigs(); activeTab = 0; render(); }
+function renderFileList() { const el = document.getElementById('fileList'), files = Object.keys(loadedFiles); el.innerHTML = ''; files.forEach(fname => { const count = (loadedFiles[fname] || []).filter(sw => Object.keys(sw.ports).length).length; const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--bg3);border:0.5px solid var(--border);border-radius:8px;font-size:13px;'; row.innerHTML = `<span><span style="font-family:monospace">${escapeHtml(fname)}</span> <span style="font-size:11px;color:var(--text2);">${count} switch${count!==1?'es':''}</span></span><button class="btn sm" style="color:var(--red);border-color:rgba(240,106,106,0.3);">Remove</button>`; row.querySelector('button').addEventListener('click', () => { delete loadedFiles[fname]; rebuildSwitches(); renderFileList(); }); el.appendChild(row); }); }
+function showValidation() {
+  const overlay = document.getElementById('valOverlay'), content = document.getElementById('valContent');
+  let html = `<div style="font-size:14px;font-weight:500;margin-bottom:16px;padding:10px 14px;background:var(--green-bg);border-radius:8px;color:var(--green);">✓ ${switches.length} switches loaded</div>`;
+  switches.forEach(sw => { const issues = []; if (!sw.ip) issues.push('No management IP'); if (!sw.mgmtVlan) issues.push('No management VLAN'); if (!Object.keys(sw.ports).length) issues.push('No ports'); if (issues.length) html += `<div style="margin-bottom:8px;padding:8px 12px;background:var(--amber-bg);border-radius:6px;"><strong style="color:var(--amber);">${escapeHtml(sw.name)}</strong><div style="font-size:12px;color:var(--amber);margin-top:4px;">⚠️ ${issues.join(', ')}</div></div>`; else html += `<div style="margin-bottom:8px;padding:8px 12px;background:var(--green-bg);border-radius:6px;"><strong style="color:var(--green);">${escapeHtml(sw.name)}</strong><div style="font-size:12px;color:var(--green);margin-top:4px;">✓ OK</div></div>`; });
+  content.innerHTML = html; overlay.style.display = 'block';
+}
+function openLookupModal() { const modal = document.getElementById('lookupOverlay'); modal.style.display = 'block'; document.getElementById('modelSearch').value = ''; document.getElementById('modelSearch').focus(); updateLookupResults(''); }
+function closeLookupModal() { document.getElementById('lookupOverlay').style.display = 'none'; }
+function updateLookupResults(query) {
+  const resultsDiv = document.getElementById('lookupResults');
+  if (!query.trim()) { resultsDiv.innerHTML = '<div style="padding:12px;color:var(--text3);text-align:center;">Start typing a model number...</div>'; return; }
+  const matches = modelLookup.filter(entry => entry.model.toLowerCase().includes(query.toLowerCase()));
+  if (!matches.length) { resultsDiv.innerHTML = '<div style="padding:12px;color:var(--text3);text-align:center;">No matches found</div>'; return; }
+  resultsDiv.innerHTML = matches.map(entry => `<div class="lookup-result" onclick="applyLookupResult('${entry.vendor}', '${entry.platform}')"><div class="model">${escapeHtml(entry.model)}</div><div><span class="vendor">${entry.vendor.charAt(0).toUpperCase()+entry.vendor.slice(1)}</span> <span class="platform">→ ${platformDB[entry.vendor][entry.platform].name}</span></div></div>`).join('');
+}
+function applyLookupResult(vendor, platform) {
+  if (!switches.length || activeTab >= switches.length) { alert('No switch selected. Load a CSV first.'); closeLookupModal(); return; }
+  const sw = switches[activeTab]; sw.brand = vendor; sw.platform = platform; regenerateAllConfigs(); render(); closeLookupModal(); renderTabs(); renderPreview();
+}
+document.getElementById('modelSearch').addEventListener('input', e => updateLookupResults(e.target.value));
+document.getElementById('downloadZipBtn').addEventListener('click', downloadZip);
+// ========== MODEL DATABASE ==========
+const modelLookup = [
+  { model: "Catalyst 2960", vendor: "cisco", platform: "ios" }, { model: "Catalyst 3560", vendor: "cisco", platform: "ios" }, { model: "Catalyst 3650", vendor: "cisco", platform: "ios_xe" }, { model: "Catalyst 3850", vendor: "cisco", platform: "ios_xe" }, { model: "Catalyst 9300", vendor: "cisco", platform: "ios_xe" }, { model: "Nexus 3000", vendor: "cisco", platform: "nxos" }, { model: "Nexus 9000", vendor: "cisco", platform: "nxos" },
+  { model: "GS108T", vendor: "netgear", platform: "prosafe" }, { model: "GS728TP", vendor: "netgear", platform: "prosafe" }, { model: "M4300", vendor: "netgear", platform: "mseries" }, { model: "S3300", vendor: "netgear", platform: "sseries" },
+  { model: "7050SX", vendor: "arista", platform: "eos" },
+  { model: "EX2200", vendor: "juniper", platform: "junos" }, { model: "EX2300", vendor: "juniper", platform: "junos" }, { model: "EX3400", vendor: "juniper", platform: "junos" },
+  { model: "Aruba 2930F", vendor: "aruba", platform: "aruba_cx" }, { model: "HP 1920", vendor: "aruba", platform: "comware" },
+  { model: "S3048-ON", vendor: "dell", platform: "os10" }, { model: "Force10 S4810", vendor: "dell", platform: "ftos" },
+  { model: "GS1900", vendor: "zyxel", platform: "zynos" }, { model: "XGS2210", vendor: "zyxel", platform: "zynos" }, { model: "XS3800", vendor: "zyxel", platform: "vantage" }
+];
+</script>
+</body>
+</html>
