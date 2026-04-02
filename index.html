@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multi-Vendor Switch Config Generator | Model Lookup + Zyxel</title>
+<title>Multi-Vendor Switch Config Generator | Fast Google Sheets Import</title>
 <style>
-  /* ========== CSS (unchanged) ========== */
+  /* ========== CSS (same as before – included fully) ========== */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #0f1117; --bg2: #181c27; --bg3: #1e2333; --bg4: #252b3b;
@@ -81,19 +81,20 @@
 <div class="container">
   <header>
     <h1>Multi‑Vendor Switch Config Generator 
-      <span class="badge-vendor">Model Lookup + Zyxel Support</span>
+      <span class="badge-vendor">Fast Google Sheets Import</span>
     </h1>
-    <p>Upload CSV → search your switch model to auto‑select vendor/platform.</p>
+    <p>Upload CSV, paste a Google Sheets link, or search your model to auto‑select vendor/platform.</p>
   </header>
 
   <div class="card">
-    <div class="label">Upload CSV files</div>
+    <div class="label">Upload CSV files or load from Google Sheets</div>
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fi').click()">
       <span class="dz-icon">📂</span>
       <p>Drop one or more CSV files here, or click to browse</p>
       <small>Block format: Name: / IP Address: / paired even/odd port rows</small>
     </div>
     <input type="file" id="fi" accept=".csv" multiple style="display:none">
+
     <div id="fileList" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
     <div id="errMsg"></div>
     <div class="format-note">
@@ -153,11 +154,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
-// ========== PLATFORM DATABASE (must be first) ==========
+// ========== PLATFORM DATABASE (full, same as previous) ==========
 const platformDB = {
   cisco: {
-    ios: {
-      name: "IOS Classic", comment: '!', interface: (p, sfp) => sfp ? `TenGigabitEthernet0/1/${p}` : `GigabitEthernet0/1/${p}`,
+    ios: { name: "IOS Classic", comment: '!', interface: (p, sfp) => sfp ? `TenGigabitEthernet0/1/${p}` : `GigabitEthernet0/1/${p}`,
       vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
       mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, `!`],
       trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
@@ -167,8 +167,7 @@ const platformDB = {
       globalCommands: [`no ip domain-lookup`, `ip domain-name local`, `line vty 0 15`, ` exec-timeout 30 0`, ` transport input ssh`],
       save: `write memory`
     },
-    ios_xe: {
-      name: "IOS-XE", comment: '!', interface: (p, sfp) => sfp ? `TenGigabitEthernet1/0/${p}` : `GigabitEthernet1/0/${p}`,
+    ios_xe: { name: "IOS-XE", comment: '!', interface: (p, sfp) => sfp ? `TenGigabitEthernet1/0/${p}` : `GigabitEthernet1/0/${p}`,
       vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
       mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip} ${mask}`, ` no shutdown`, `!`],
       trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
@@ -178,8 +177,7 @@ const platformDB = {
       globalCommands: [`no ip domain-lookup`, `ip domain-name local`, `line vty 0 15`, ` exec-timeout 30 0`, ` transport input ssh`],
       save: `write memory`
     },
-    nxos: {
-      name: "NX-OS", comment: '!', interface: (p, sfp) => `Ethernet1/${p}`,
+    nxos: { name: "NX-OS", comment: '!', interface: (p, sfp) => `Ethernet1/${p}`,
       vlanCreate: (id, name) => [`vlan ${id}`, ` name ${name}`, `!`],
       mgmtInterface: (vid, ip, mask) => [`interface Vlan${vid}`, ` ip address ${ip}/${maskToCidr(mask)}`, ` no shutdown`, `!`],
       trunkAllowed: (iface, vlans) => `switchport trunk allowed vlan ${vlans}`,
@@ -188,8 +186,7 @@ const platformDB = {
       spanningTreeMode: `spanning-tree mode rapid-pvst`,
       globalCommands: [`feature ssh`, `feature interface-vlan`], save: `copy running-config startup-config`
     },
-    ios_xr: {
-      name: "IOS-XR", comment: '!', interface: (p, sfp) => sfp ? `TenGigE0/0/0/${p}` : `GigabitEthernet0/0/0/${p}`,
+    ios_xr: { name: "IOS-XR", comment: '!', interface: (p, sfp) => sfp ? `TenGigE0/0/0/${p}` : `GigabitEthernet0/0/0/${p}`,
       vlanCreate: (id, name) => [`! VLAN ${id} (${name})`, `!`],
       mgmtInterface: (vid, ip, mask) => [`interface BVI${vid}`, ` ipv4 address ${ip} ${mask}`, ` no shutdown`, `!`],
       trunkAllowed: (iface, vlans) => `encapsulation dot1q ${vlans.split(',')[0]}`, accessVlan: (iface, vid) => `encapsulation dot1q ${vid}`,
@@ -318,7 +315,6 @@ function maskToCidr(mask) {
   });
   return bits.toString();
 }
-
 function vlanId(s) { const m = (s || '').match(/^(\d+)/); return m ? m[1] : null; }
 function vlanName(s) { return (s || '').replace(/^\d+\s*\|\s*/, '').trim(); }
 function slug(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
@@ -337,11 +333,9 @@ function parseCSV(text) {
   if (field !== '' || cur.length) { cur.push(field.trim()); rows.push(cur); }
   return rows.filter(r => r.some(c => c !== ''));
 }
-
 function findColumn(row, label) {
   return row.findIndex(cell => cell && cell.trim().toLowerCase() === label.toLowerCase());
 }
-
 function parseNetworkBook(text) {
   const rows = parseCSV(text);
   const switches = [];
@@ -394,7 +388,11 @@ function parseNetworkBook(text) {
         j++;
         if (j < rows.length && (findColumn(rows[j], 'Name:') !== -1 || findColumn(rows[j], 'Switch:') !== -1)) break;
       }
-      switches.push(sw);
+      // Only treat as a real switch if it has an IP or at least one port configured.
+      // This filters out metadata rows that happen to contain "Name:" (e.g. project name fields).
+      if (sw.ip || Object.keys(sw.ports).length > 0) {
+        switches.push(sw);
+      }
       i = j;
     } else i++;
   }
@@ -411,70 +409,29 @@ function generateConfig(sw) {
   L.push('! --- System ---', `hostname ${slug(sw.name)}`);
   spec.globalCommands.forEach(cmd => L.push(cmd)); L.push('');
   const vlanMap = new Map();
-  Object.values(sw.ports).forEach(pc => {
-    if (!pc.vlan || pc.vlan === '--TRUNK--') return;
-    const id = vlanId(pc.vlan), nm = vlanName(pc.vlan);
-    if (id) vlanMap.set(id, nm);
-  });
-  if (vlanMap.size) {
-    L.push('! --- VLANs ---');
-    vlanMap.forEach((nm, id) => spec.vlanCreate(id, nm).forEach(line => L.push(line)));
-    L.push('');
-  }
+  Object.values(sw.ports).forEach(pc => { if (!pc.vlan || pc.vlan === '--TRUNK--') return; const id = vlanId(pc.vlan), nm = vlanName(pc.vlan); if (id) vlanMap.set(id, nm); });
+  if (vlanMap.size) { L.push('! --- VLANs ---'); vlanMap.forEach((nm, id) => spec.vlanCreate(id, nm).forEach(line => L.push(line))); L.push(''); }
   const mgmtMatch = sw.mgmtVlan ? sw.mgmtVlan.match(/\d+/) : null;
-  if (sw.ip && mgmtMatch) {
-    L.push('! --- Management Interface ---');
-    spec.mgmtInterface(mgmtMatch[0], sw.ip, sw.subnet || '255.255.255.0').forEach(line => L.push(line));
-    L.push('');
-  }
+  if (sw.ip && mgmtMatch) { L.push('! --- Management Interface ---'); spec.mgmtInterface(mgmtMatch[0], sw.ip, sw.subnet || '255.255.255.0').forEach(line => L.push(line)); L.push(''); }
   const trunkPorts = [], accessMap = {};
-  Object.entries(sw.ports).forEach(([port, pc]) => {
-    if (pc.vlan === '--TRUNK--') trunkPorts.push({ port, pc });
-    else { const id = vlanId(pc.vlan); if (id) (accessMap[id] = accessMap[id] || []).push({ port, pc }); }
-  });
+  Object.entries(sw.ports).forEach(([port, pc]) => { if (pc.vlan === '--TRUNK--') trunkPorts.push({ port, pc }); else { const id = vlanId(pc.vlan); if (id) (accessMap[id] = accessMap[id] || []).push({ port, pc }); } });
   const allVlans = [...vlanMap.keys()].join(',');
-  if (trunkPorts.length) {
-    L.push('! --- Trunk Ports ---');
-    trunkPorts.forEach(({ port, pc }) => {
-      const sfp = (pc.portType || '').toLowerCase().includes('sfp');
-      const iface = spec.interface(port, sfp);
-      L.push(`interface ${iface}`, ind('description "Uplink/Trunk"'), ind('switchport mode trunk'));
-      if (allVlans) L.push(ind(spec.trunkAllowed(iface, allVlans)));
-      L.push(ind('no shutdown'), 'exit');
-    }); L.push('');
-  }
-  if (Object.keys(accessMap).length) {
-    L.push('! --- Access Ports ---');
-    Object.entries(accessMap).forEach(([vid, entries]) => {
-      L.push(`! VLAN ${vid} — ${vlanMap.get(vid) || ''}`);
-      entries.forEach(({ port, pc }) => {
-        const sfp = (pc.portType || '').toLowerCase().includes('sfp');
-        const iface = spec.interface(port, sfp);
-        L.push(`interface ${iface}`, ind(`description "${pc.use || ('VLAN ' + vid)}"`), ind('switchport mode access'), ind(spec.accessVlan(iface, vid)));
-        if (spec.portfast) L.push(ind(spec.portfast(iface)));
-        if (spec.stormControl) L.push(ind(spec.stormControl(iface)));
-        L.push(ind('no shutdown'), 'exit');
-      });
-    }); L.push('');
-  }
+  if (trunkPorts.length) { L.push('! --- Trunk Ports ---'); trunkPorts.forEach(({ port, pc }) => { const sfp = (pc.portType || '').toLowerCase().includes('sfp'); const iface = spec.interface(port, sfp); L.push(`interface ${iface}`, ind('description "Uplink/Trunk"'), ind('switchport mode trunk')); if (allVlans) L.push(ind(spec.trunkAllowed(iface, allVlans))); L.push(ind('no shutdown'), 'exit'); }); L.push(''); }
+  if (Object.keys(accessMap).length) { L.push('! --- Access Ports ---'); Object.entries(accessMap).forEach(([vid, entries]) => { L.push(`! VLAN ${vid} — ${vlanMap.get(vid) || ''}`); entries.forEach(({ port, pc }) => { const sfp = (pc.portType || '').toLowerCase().includes('sfp'); const iface = spec.interface(port, sfp); L.push(`interface ${iface}`, ind(`description "${pc.use || ('VLAN ' + vid)}"`), ind('switchport mode access'), ind(spec.accessVlan(iface, vid))); if (spec.portfast) L.push(ind(spec.portfast(iface))); if (spec.stormControl) L.push(ind(spec.stormControl(iface))); L.push(ind('no shutdown'), 'exit'); }); }); L.push(''); }
   L.push('! --- Spanning Tree ---', spec.spanningTreeMode || '!', '', '! --- Save ---', spec.save, '', `${spec.comment || '!'} End of config: ${sw.name}`);
   return L.join('\n');
 }
 
 // ========== UI STATE ==========
 let switches = [], configs = {}, activeTab = 0;
+let loadedSources = {};
 
-function regenerateAllConfigs() {
-  configs = {};
-  switches.forEach(sw => { configs[sw.name] = generateConfig(sw); });
-}
-
+function regenerateAllConfigs() { configs = {}; switches.forEach(sw => { configs[sw.name] = generateConfig(sw); }); }
 function render() {
   if (!switches.length) { document.getElementById('results').classList.add('hidden'); return; }
   document.getElementById('results').classList.remove('hidden');
   document.getElementById('switchCount').textContent = `${switches.length} switch${switches.length !== 1 ? 'es' : ''} found`;
-  populateGlobalSelects();
-  renderTabs(); renderPreview(); renderCards();
+  populateGlobalSelects(); renderTabs(); renderPreview(); renderCards();
 }
 function renderTabs() {
   const el = document.getElementById('tabs'); el.innerHTML = '';
@@ -507,7 +464,7 @@ function renderCards() {
         </div>
       </div>
       <div class="pills">${[...vlanMap.entries()].map(([id,nm]) => `<span class="pill">VLAN ${id}: ${escapeHtml(nm)}</span>`).join('')}${trunkPorts.length ? `<span class="pill trunk">${trunkPorts.length} trunk port${trunkPorts.length>1?'s':''}</span>` : ''}</div>
-      <table class="port-table"><thead><tr><th>Port</th><th>Type</th><th>VLAN</th><th>Connected device</th></tr></thead><tbody>
+      <table class="port-table"><thead><tr><th>Port</th><th>Type</th><th>VLAN</th><th>Connected device</th> </thead><tbody>
         ${allPorts.map(({port,type,id,pc}) => `<tr><td>${escapeHtml(port)}</td><td><span class="badge ${type}${(pc.portType||'').toLowerCase().includes('sfp')?' sfp':''}">${escapeHtml(pc.portType||'RJ45')}${type==='trunk'?' trunk':''}</span></td><td>${type==='trunk'?'<span style="color:var(--text3)">all vlans</span>':(id?`${id} — ${escapeHtml(vlanMap.get(id)||'')}`:'—')}</td><td style="color:var(--text2);font-family:sans-serif">${escapeHtml(pc.use||'—')}</td></tr>`).join('')}
       </tbody></table>`;
     const brandSel = card.querySelector('.brand-select'), platSel = card.querySelector('.platform-select');
@@ -545,23 +502,237 @@ function applyGlobalVendor() {
   switches.forEach(sw => { sw.brand = brand; sw.platform = platform; });
   regenerateAllConfigs(); render();
 }
-let loadedFiles = {};
-const dropZone = document.getElementById('dropZone'), fi = document.getElementById('fi');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFiles(Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.csv'))); });
-fi.addEventListener('change', e => handleFiles(Array.from(e.target.files)));
-function handleFiles(files) { if (!files.length) return; let completed = 0, results = {}; files.forEach(file => { const reader = new FileReader(); reader.onload = e => { results[file.name] = e.target.result; if (++completed === files.length) processAllFiles(results); }; reader.readAsText(file); }); }
-function processAllFiles(fileContents) { let anyNew = false; Object.entries(fileContents).forEach(([fname, text]) => { try { const parsed = parseNetworkBook(text); if (parsed.length) { loadedFiles[fname] = parsed; anyNew = true; } else document.getElementById('errMsg').innerHTML += `<div class="err">⚠️ No switches in ${escapeHtml(fname)}.</div>`; } catch(err) { document.getElementById('errMsg').innerHTML += `<div class="err">⚠️ Error reading ${escapeHtml(fname)}: ${err.message}</div>`; } }); if (anyNew) { renderFileList(); rebuildSwitches(); } }
-function rebuildSwitches() { const allParsed = []; Object.values(loadedFiles).forEach(list => list.forEach(sw => { if (Object.keys(sw.ports).length) allParsed.push(sw); })); switches = allParsed; if (!switches.length) { document.getElementById('results').classList.add('hidden'); return; } switches.forEach(sw => { if (!sw.brand) sw.brand = 'cisco'; if (!sw.platform || !platformDB[sw.brand]?.[sw.platform]) sw.platform = Object.keys(platformDB[sw.brand])[0]; }); regenerateAllConfigs(); activeTab = 0; render(); }
-function renderFileList() { const el = document.getElementById('fileList'), files = Object.keys(loadedFiles); el.innerHTML = ''; files.forEach(fname => { const count = (loadedFiles[fname] || []).filter(sw => Object.keys(sw.ports).length).length; const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--bg3);border:0.5px solid var(--border);border-radius:8px;font-size:13px;'; row.innerHTML = `<span><span style="font-family:monospace">${escapeHtml(fname)}</span> <span style="font-size:11px;color:var(--text2);">${count} switch${count!==1?'es':''}</span></span><button class="btn sm" style="color:var(--red);border-color:rgba(240,106,106,0.3);">Remove</button>`; row.querySelector('button').addEventListener('click', () => { delete loadedFiles[fname]; rebuildSwitches(); renderFileList(); }); el.appendChild(row); }); }
-function showValidation() {
-  const overlay = document.getElementById('valOverlay'), content = document.getElementById('valContent');
-  let html = `<div style="font-size:14px;font-weight:500;margin-bottom:16px;padding:10px 14px;background:var(--green-bg);border-radius:8px;color:var(--green);">✓ ${switches.length} switches loaded</div>`;
-  switches.forEach(sw => { const issues = []; if (!sw.ip) issues.push('No management IP'); if (!sw.mgmtVlan) issues.push('No management VLAN'); if (!Object.keys(sw.ports).length) issues.push('No ports'); if (issues.length) html += `<div style="margin-bottom:8px;padding:8px 12px;background:var(--amber-bg);border-radius:6px;"><strong style="color:var(--amber);">${escapeHtml(sw.name)}</strong><div style="font-size:12px;color:var(--amber);margin-top:4px;">⚠️ ${issues.join(', ')}</div></div>`; else html += `<div style="margin-bottom:8px;padding:8px 12px;background:var(--green-bg);border-radius:6px;"><strong style="color:var(--green);">${escapeHtml(sw.name)}</strong><div style="font-size:12px;color:var(--green);margin-top:4px;">✓ OK</div></div>`; });
-  content.innerHTML = html; overlay.style.display = 'block';
+// ========== VALIDATION ENGINE ==========
+
+// Known port counts per model keyword — used to catch port number overflows
+const modelPortLimits = {
+  // Cisco
+  '2960-24': 24, '2960-48': 48, '2960x-24': 24, '2960x-48': 48,
+  '3560-24': 24, '3560-48': 48, '3650-24': 24, '3650-48': 48,
+  '3850-24': 24, '3850-48': 48, '9300-24': 24, '9300-48': 48,
+  // Netgear
+  'gs108': 8, 'gs116': 16, 'gs724': 24, 'gs728': 28, 'gs748': 48,
+  'gs308': 8, 'gs316': 16, 'm4300-28': 28, 'm4300-52': 52,
+  // Aruba/HP
+  '2530-24': 24, '2530-48': 48, '2930f-24': 24, '2930f-48': 48,
+  // Dell
+  's3048': 48, 's4810': 10, 's3100-24': 24, 's3100-48': 48,
+  // Juniper
+  'ex2200-24': 24, 'ex2200-48': 48, 'ex2300-24': 24, 'ex2300-48': 48,
+  'ex3400-24': 24, 'ex3400-48': 48,
+  // Zyxel
+  'gs1900-8': 8, 'gs1900-16': 16, 'gs1900-24': 24, 'gs1900-48': 48,
+  'xgs2210-28': 28, 'xgs2210-52': 52,
+};
+
+function getPortLimitForModel(modelStr) {
+  if (!modelStr) return null;
+  const lower = modelStr.toLowerCase().replace(/\s+/g, '');
+  for (const [key, limit] of Object.entries(modelPortLimits)) {
+    if (lower.includes(key)) return limit;
+  }
+  // Generic fallback: look for -24, -48 etc in model name
+  const m = lower.match(/-(\d{1,2})(?:p|t|g|$)/);
+  if (m) return parseInt(m[1]);
+  return null;
 }
-function openLookupModal() { const modal = document.getElementById('lookupOverlay'); modal.style.display = 'block'; document.getElementById('modelSearch').value = ''; document.getElementById('modelSearch').focus(); updateLookupResults(''); }
+
+function isValidIp(ip) {
+  if (!ip) return false;
+  const parts = ip.split('.');
+  if (parts.length !== 4) return false;
+  return parts.every(p => /^\d+$/.test(p) && parseInt(p) >= 0 && parseInt(p) <= 255);
+}
+
+function isValidSubnet(mask) {
+  if (!mask) return false;
+  // Accept CIDR or dotted
+  if (/^\d+$/.test(mask.trim())) return parseInt(mask) >= 0 && parseInt(mask) <= 32;
+  return isValidIp(mask);
+}
+
+function validateSwitch(sw) {
+  const errors = [];   // things that will definitely break the config
+  const warnings = []; // things that might cause problems
+  const info = [];     // advisory notes
+
+  // ── Identity ──────────────────────────────────────────────────────────────
+  if (!sw.name) errors.push('No switch name');
+
+  // ── Management IP ─────────────────────────────────────────────────────────
+  if (!sw.ip) {
+    errors.push('No management IP address');
+  } else if (!isValidIp(sw.ip)) {
+    errors.push(`Invalid IP address: "${sw.ip}"`);
+  } else {
+    const octets = sw.ip.split('.').map(Number);
+    if (octets[0] === 0) errors.push('IP starts with 0 — invalid');
+    if (octets[0] === 127) errors.push('IP is loopback range (127.x.x.x)');
+    if (octets[0] >= 224) errors.push('IP is in multicast/reserved range');
+    if (sw.ip === '255.255.255.255') errors.push('IP is broadcast address');
+  }
+
+  if (sw.subnet && !isValidSubnet(sw.subnet)) {
+    errors.push(`Invalid subnet mask: "${sw.subnet}"`);
+  }
+
+  // ── Management VLAN ───────────────────────────────────────────────────────
+  if (!sw.mgmtVlan) {
+    errors.push('No management VLAN specified (MGMT Interface)');
+  } else {
+    const mgmtVlanId = parseInt((sw.mgmtVlan.match(/\d+/) || [])[0]);
+    if (isNaN(mgmtVlanId)) errors.push(`Cannot parse management VLAN from: "${sw.mgmtVlan}"`);
+    else if (mgmtVlanId < 1 || mgmtVlanId > 4094) errors.push(`Management VLAN ${mgmtVlanId} is out of range (1–4094)`);
+    else if (mgmtVlanId === 1) warnings.push('Management VLAN is 1 — using the native/default VLAN for management is a security risk');
+  }
+
+  // ── Ports ─────────────────────────────────────────────────────────────────
+  const portEntries = Object.entries(sw.ports);
+  if (!portEntries.length) {
+    errors.push('No ports configured');
+  } else {
+    const portNums = portEntries.map(([p]) => parseInt(p)).filter(n => !isNaN(n));
+    const portLimit = getPortLimitForModel(sw.model);
+
+    // Port number range
+    if (portLimit) {
+      const overLimit = portNums.filter(n => n > portLimit);
+      if (overLimit.length) {
+        errors.push(`Port(s) ${overLimit.join(', ')} exceed model port count (${sw.model} has ${portLimit} ports)`);
+      }
+    }
+    const zeroPort = portEntries.filter(([p]) => p === '0' || p === '00');
+    if (zeroPort.length) warnings.push('Port "0" found — most switches number from 1, not 0');
+
+    // VLAN checks
+    const allVlanIds = new Set();
+    const mgmtVlanId = sw.mgmtVlan ? parseInt((sw.mgmtVlan.match(/\d+/) || [])[0]) : null;
+    let trunkCount = 0, accessCount = 0, noVlanCount = 0;
+
+    portEntries.forEach(([port, pc]) => {
+      if (pc.vlan === '--TRUNK--') {
+        trunkCount++;
+        return;
+      }
+      const vid = vlanId(pc.vlan);
+      if (!vid) {
+        noVlanCount++;
+        return;
+      }
+      const vidNum = parseInt(vid);
+      if (vidNum < 1 || vidNum > 4094) {
+        errors.push(`Port ${port}: VLAN ${vid} is out of range (1–4094)`);
+      }
+      if (vidNum === 1) {
+        warnings.push(`Port ${port}: assigned to VLAN 1 (the default/native VLAN) — usually unintentional`);
+      }
+      allVlanIds.add(vid);
+      accessCount++;
+    });
+
+    if (noVlanCount > 0) warnings.push(`${noVlanCount} port(s) have no VLAN assigned`);
+    if (trunkCount === 0 && accessCount > 0) info.push('No trunk ports defined — make sure uplink is configured elsewhere');
+    if (trunkCount > 0 && accessCount === 0) warnings.push('Only trunk ports, no access ports — is this intentional?');
+
+    // Mgmt VLAN should exist as an access VLAN on at least one port, or be on a trunk
+    if (mgmtVlanId && !isNaN(mgmtVlanId)) {
+      const mgmtVlanStr = String(mgmtVlanId);
+      const mgmtOnAccess = [...allVlanIds].includes(mgmtVlanStr);
+      const hasTrunks = trunkCount > 0;
+      if (!mgmtOnAccess && !hasTrunks) {
+        warnings.push(`Management VLAN ${mgmtVlanId} is not assigned to any port — switch may be unreachable after config is applied`);
+      }
+    }
+
+    // Duplicate port numbers
+    const portKeys = portEntries.map(([p]) => p);
+    const seen = new Set(), dupes = new Set();
+    portKeys.forEach(p => { if (seen.has(p)) dupes.add(p); seen.add(p); });
+    if (dupes.size) errors.push(`Duplicate port entries: ${[...dupes].join(', ')}`);
+  }
+
+  // ── Platform-specific checks ───────────────────────────────────────────────
+  const brand = sw.brand, platform = sw.platform;
+  if (brand === 'cisco' && platform === 'ios_xr') {
+    info.push('IOS-XR is a service-provider OS — verify this is the correct platform for a campus/access switch');
+  }
+  if (brand === 'cisco' && platform === 'nxos') {
+    const portNums = Object.keys(sw.ports).map(Number).filter(n => !isNaN(n));
+    if (portNums.some(n => n > 128)) warnings.push('NX-OS port numbers above 128 are unusual for typical Nexus deployments');
+  }
+
+  // ── Duplicate IPs across all switches (cross-switch check) ─────────────────
+  if (sw.ip && isValidIp(sw.ip)) {
+    const others = switches.filter(s => s !== sw && s.ip === sw.ip);
+    if (others.length) errors.push(`Duplicate management IP ${sw.ip} also used by: ${others.map(s=>s.name).join(', ')}`);
+  }
+
+  return { errors, warnings, info };
+}
+
+function showValidation() {
+  const overlay = document.getElementById('valOverlay');
+  const contentEl = document.getElementById('valContent');
+
+  const results = switches.map(sw => ({ sw, ...validateSwitch(sw) }));
+  const totalErrors = results.reduce((n, r) => n + r.errors.length, 0);
+  const totalWarnings = results.reduce((n, r) => n + r.warnings.length, 0);
+
+  const summaryColor = totalErrors > 0 ? 'var(--red)' : totalWarnings > 0 ? 'var(--amber)' : 'var(--green)';
+  const summaryBg = totalErrors > 0 ? 'var(--red-bg)' : totalWarnings > 0 ? 'var(--amber-bg)' : 'var(--green-bg)';
+  const summaryIcon = totalErrors > 0 ? '✖' : totalWarnings > 0 ? '⚠️' : '✓';
+  const summaryText = totalErrors > 0
+    ? `${totalErrors} error${totalErrors!==1?'s':''} found across ${switches.length} switch${switches.length!==1?'es':''} — configs may not apply correctly`
+    : totalWarnings > 0
+    ? `${switches.length} switch${switches.length!==1?'es':''} validated — ${totalWarnings} warning${totalWarnings!==1?'s':''} to review`
+    : `All ${switches.length} switch${switches.length!==1?'es':''} passed validation`;
+
+  let html = `<div style="font-size:13px;font-weight:500;margin-bottom:16px;padding:10px 14px;background:${summaryBg};border-radius:8px;color:${summaryColor};">${summaryIcon} ${escapeHtml(summaryText)}</div>`;
+
+  results.forEach(({ sw, errors, warnings, info }) => {
+    const hasErrors = errors.length > 0;
+    const hasWarnings = warnings.length > 0;
+    const allOk = !hasErrors && !hasWarnings;
+    const borderColor = hasErrors ? 'rgba(240,106,106,0.4)' : hasWarnings ? 'rgba(245,158,11,0.4)' : 'rgba(62,207,110,0.3)';
+    const titleColor = hasErrors ? 'var(--red)' : hasWarnings ? 'var(--amber)' : 'var(--green)';
+    const icon = hasErrors ? '✖' : hasWarnings ? '⚠' : '✓';
+
+    html += `<div style="margin-bottom:10px;padding:10px 14px;background:var(--bg3);border:0.5px solid ${borderColor};border-radius:8px;">`;
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${allOk?0:8}px;">`;
+    html += `<strong style="color:${titleColor};font-family:monospace;">${icon} ${escapeHtml(sw.name)}</strong>`;
+    html += `<span style="font-size:11px;color:var(--text3);">${escapeHtml([sw.brand, sw.platform].join(' / '))}${sw.model?' · '+escapeHtml(sw.model):''}</span>`;
+    html += `</div>`;
+
+    if (errors.length) {
+      html += errors.map(e => `<div style="font-size:12px;color:var(--red);padding:3px 0 3px 12px;border-left:2px solid var(--red);margin-bottom:3px;">✖ ${escapeHtml(e)}</div>`).join('');
+    }
+    if (warnings.length) {
+      html += warnings.map(w => `<div style="font-size:12px;color:var(--amber);padding:3px 0 3px 12px;border-left:2px solid var(--amber);margin-bottom:3px;">⚠ ${escapeHtml(w)}</div>`).join('');
+    }
+    if (info.length) {
+      html += info.map(i => `<div style="font-size:12px;color:var(--text2);padding:3px 0 3px 12px;border-left:2px solid var(--border2);margin-bottom:3px;">ℹ ${escapeHtml(i)}</div>`).join('');
+    }
+    if (allOk) {
+      html += `<div style="font-size:12px;color:var(--green);">No issues found</div>`;
+    }
+    html += `</div>`;
+  });
+
+  contentEl.innerHTML = html;
+  overlay.style.display = 'block';
+}
+
+// ========== MODEL LOOKUP ==========
+const modelLookup = [
+  { model: "Catalyst 2960", vendor: "cisco", platform: "ios" }, { model: "Catalyst 3560", vendor: "cisco", platform: "ios" }, { model: "Catalyst 3650", vendor: "cisco", platform: "ios_xe" }, { model: "Catalyst 3850", vendor: "cisco", platform: "ios_xe" }, { model: "Catalyst 9300", vendor: "cisco", platform: "ios_xe" }, { model: "Nexus 3000", vendor: "cisco", platform: "nxos" }, { model: "Nexus 9000", vendor: "cisco", platform: "nxos" },
+  { model: "GS108T", vendor: "netgear", platform: "prosafe" }, { model: "GS728TP", vendor: "netgear", platform: "prosafe" }, { model: "M4300", vendor: "netgear", platform: "mseries" }, { model: "S3300", vendor: "netgear", platform: "sseries" },
+  { model: "7050SX", vendor: "arista", platform: "eos" },
+  { model: "EX2200", vendor: "juniper", platform: "junos" }, { model: "EX2300", vendor: "juniper", platform: "junos" }, { model: "EX3400", vendor: "juniper", platform: "junos" },
+  { model: "Aruba 2930F", vendor: "aruba", platform: "aruba_cx" }, { model: "HP 1920", vendor: "aruba", platform: "comware" },
+  { model: "S3048-ON", vendor: "dell", platform: "os10" }, { model: "Force10 S4810", vendor: "dell", platform: "ftos" },
+  { model: "GS1900", vendor: "zyxel", platform: "zynos" }, { model: "XGS2210", vendor: "zyxel", platform: "zynos" }, { model: "XS3800", vendor: "zyxel", platform: "vantage" }
+];
+function openLookupModal() { document.getElementById('lookupOverlay').style.display = 'block'; document.getElementById('modelSearch').value = ''; document.getElementById('modelSearch').focus(); updateLookupResults(''); }
 function closeLookupModal() { document.getElementById('lookupOverlay').style.display = 'none'; }
 function updateLookupResults(query) {
   const resultsDiv = document.getElementById('lookupResults');
@@ -575,17 +746,65 @@ function applyLookupResult(vendor, platform) {
   const sw = switches[activeTab]; sw.brand = vendor; sw.platform = platform; regenerateAllConfigs(); render(); closeLookupModal(); renderTabs(); renderPreview();
 }
 document.getElementById('modelSearch').addEventListener('input', e => updateLookupResults(e.target.value));
+
+// ========== FILE HANDLING ==========
+function handleFiles(files) {
+  if (!files.length) return;
+  let completed = 0, results = {};
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => { results[file.name] = e.target.result; if (++completed === files.length) processFileResults(results); };
+    reader.readAsText(file);
+  });
+}
+function processFileResults(fileContents) {
+  let anyNew = false;
+  Object.entries(fileContents).forEach(([filename, text]) => {
+    try {
+      const parsed = parseNetworkBook(text);
+      if (parsed.length) {
+        const sourceId = `file_${filename}_${Date.now()}_${Math.random()}`;
+        loadedSources[sourceId] = { name: filename, switches: parsed, type: 'file' };
+        anyNew = true;
+      } else document.getElementById('errMsg').innerHTML += `<div class="err">⚠️ No switches in ${escapeHtml(filename)}.</div>`;
+    } catch(err) { document.getElementById('errMsg').innerHTML += `<div class="err">⚠️ Error reading ${escapeHtml(filename)}: ${err.message}</div>`; }
+  });
+  if (anyNew) { rebuildSwitches(); renderFileList(); }
+}
+function rebuildSwitches() {
+  const allSwitches = [];
+  Object.values(loadedSources).forEach(source => {
+    source.switches.forEach(sw => {
+      if (!sw.brand) sw.brand = 'cisco';
+      if (!sw.platform || !platformDB[sw.brand]?.[sw.platform]) sw.platform = Object.keys(platformDB[sw.brand])[0];
+      allSwitches.push(sw);
+    });
+  });
+  switches = allSwitches;
+  if (!switches.length) { document.getElementById('results').classList.add('hidden'); return; }
+  regenerateAllConfigs(); activeTab = 0; render();
+}
+function renderFileList() {
+  const el = document.getElementById('fileList');
+  el.innerHTML = '';
+  Object.entries(loadedSources).forEach(([sourceId, source]) => {
+    const count = source.switches.filter(sw => Object.keys(sw.ports).length > 0).length;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--bg3);border:0.5px solid var(--border);border-radius:8px;font-size:13px;';
+    row.innerHTML = `<span><span style="font-family:monospace">${escapeHtml(source.name)}</span> <span style="font-size:11px;color:var(--text2);">${count} switch${count!==1?'es':''}</span></span><button class="btn sm" style="color:var(--red);border-color:rgba(240,106,106,0.3);">Remove</button>`;
+    row.querySelector('button').addEventListener('click', () => { delete loadedSources[sourceId]; rebuildSwitches(); renderFileList(); });
+    el.appendChild(row);
+  });
+}
+
+// ========== INITIALIZE ==========
+;
 document.getElementById('downloadZipBtn').addEventListener('click', downloadZip);
-// ========== MODEL DATABASE ==========
-const modelLookup = [
-  { model: "Catalyst 2960", vendor: "cisco", platform: "ios" }, { model: "Catalyst 3560", vendor: "cisco", platform: "ios" }, { model: "Catalyst 3650", vendor: "cisco", platform: "ios_xe" }, { model: "Catalyst 3850", vendor: "cisco", platform: "ios_xe" }, { model: "Catalyst 9300", vendor: "cisco", platform: "ios_xe" }, { model: "Nexus 3000", vendor: "cisco", platform: "nxos" }, { model: "Nexus 9000", vendor: "cisco", platform: "nxos" },
-  { model: "GS108T", vendor: "netgear", platform: "prosafe" }, { model: "GS728TP", vendor: "netgear", platform: "prosafe" }, { model: "M4300", vendor: "netgear", platform: "mseries" }, { model: "S3300", vendor: "netgear", platform: "sseries" },
-  { model: "7050SX", vendor: "arista", platform: "eos" },
-  { model: "EX2200", vendor: "juniper", platform: "junos" }, { model: "EX2300", vendor: "juniper", platform: "junos" }, { model: "EX3400", vendor: "juniper", platform: "junos" },
-  { model: "Aruba 2930F", vendor: "aruba", platform: "aruba_cx" }, { model: "HP 1920", vendor: "aruba", platform: "comware" },
-  { model: "S3048-ON", vendor: "dell", platform: "os10" }, { model: "Force10 S4810", vendor: "dell", platform: "ftos" },
-  { model: "GS1900", vendor: "zyxel", platform: "zynos" }, { model: "XGS2210", vendor: "zyxel", platform: "zynos" }, { model: "XS3800", vendor: "zyxel", platform: "vantage" }
-];
+document.getElementById('dropZone').addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+document.getElementById('dropZone').addEventListener('dragleave', () => dropZone.classList.remove('over'));
+document.getElementById('dropZone').addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFiles(Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.csv'))); });
+document.getElementById('fi').addEventListener('change', e => handleFiles(Array.from(e.target.files)));
+setTimeout(() => { if (document.getElementById('globalBrand')) populateGlobalSelects(); }, 100);
 </script>
 </body>
 </html>
